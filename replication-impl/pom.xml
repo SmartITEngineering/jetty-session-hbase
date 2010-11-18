@@ -41,8 +41,16 @@
       <artifactId>smart-abstract-dao</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.smartitengineering.smart-util</groupId>
+      <artifactId>smart-bean-util</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
