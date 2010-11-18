@@ -1,4 +1,4 @@
-package com.smartitengineering.jetty.session.hbase;
+package com.smartitengineering.jetty.hbase.impl;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
