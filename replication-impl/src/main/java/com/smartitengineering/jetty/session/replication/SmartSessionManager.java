@@ -72,6 +72,17 @@ public class SmartSessionManager extends AbstractSessionManager {
     //any other nodes;
   }
 
+  protected void invalidateSession(String idInCluster) {
+    Session session = null;
+    synchronized (this) {
+      session = new Session(SessionReplicationAPI.getInstance().getDataReader().getById(idInCluster));
+    }
+
+    if (session != null) {
+      session.invalidate();
+    }
+  }
+
   @Override
   protected Session newSession(HttpServletRequest hsr) {
     final Session session = new SmartSessionManager.Session(hsr);
@@ -137,6 +148,11 @@ public class SmartSessionManager extends AbstractSessionManager {
       willPassivate();
       updateSession(this);
       didActivate();
+    }
+
+    @Override
+    public String getClusterId() {
+      return super.getClusterId();
     }
 
     @Override

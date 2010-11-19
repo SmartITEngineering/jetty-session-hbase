@@ -51,12 +51,24 @@ public class SessionReplicationAPI {
   private CommonReadDao<SessionData, String> dataReader;
   @InjectableField(beanName = "dataWriter")
   private CommonWriteDao<SessionData> dataWriter;
+  @InjectableField(beanName = "idReader")
+  private CommonReadDao<SessionId, String> idReader;
+  @InjectableField(beanName = "idWriter")
+  private CommonWriteDao<SessionId> idWriter;
 
-  CommonReadDao<SessionData, String> getDataReader() {
+  public CommonReadDao<SessionData, String> getDataReader() {
     return dataReader;
   }
 
-  CommonWriteDao<SessionData> getDataWriter() {
+  public CommonWriteDao<SessionData> getDataWriter() {
     return dataWriter;
+  }
+
+  public CommonReadDao<SessionId, String> getIdReader() {
+    return idReader;
+  }
+
+  public CommonWriteDao<SessionId> getIdWriter() {
+    return idWriter;
   }
 }

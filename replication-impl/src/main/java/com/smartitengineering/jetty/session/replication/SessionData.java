@@ -30,7 +30,7 @@ import org.eclipse.jetty.server.SessionIdManager;
  *
  * @author imyousuf
  */
-class SessionData extends AbstractGenericPersistentDTO<SessionData, String, Long> {
+public class SessionData extends AbstractGenericPersistentDTO<SessionData, String, Long> {
 
   private final String id;
   private String rowId;
@@ -47,7 +47,7 @@ class SessionData extends AbstractGenericPersistentDTO<SessionData, String, Long
   private String virtualHost;
   private SessionIdManager manager;
 
-  public SessionData(String sessionId, SessionIdManager idManager) {
+  SessionData(String sessionId, SessionIdManager idManager) {
     this.manager = idManager;
     id = sessionId;
     created = System.currentTimeMillis();
