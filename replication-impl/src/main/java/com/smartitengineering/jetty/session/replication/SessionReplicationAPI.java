@@ -24,6 +24,9 @@ import com.smartitengineering.dao.common.CommonWriteDao;
 import com.smartitengineering.util.bean.BeanFactoryRegistrar;
 import com.smartitengineering.util.bean.annotations.Aggregator;
 import com.smartitengineering.util.bean.annotations.InjectableField;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -32,7 +35,9 @@ import com.smartitengineering.util.bean.annotations.InjectableField;
 @Aggregator(contextName = "com.smartitengineering.jetty.session.replication")
 public class SessionReplicationAPI {
 
+  public static final String INITIALIZER_CLASS_SYS_PROP = "com.smartitengineering.jetty.session.replication.init";
   private static SessionReplicationAPI api;
+  private static final Logger LOGGER = LoggerFactory.getLogger(SessionReplicationAPI.class);
 
   public static SessionReplicationAPI getInstance() {
     if (api == null) {
@@ -44,6 +49,15 @@ public class SessionReplicationAPI {
   private synchronized static void init() {
     if (api == null) {
       api = new SessionReplicationAPI();
+      String val = System.getProperty(INITIALIZER_CLASS_SYS_PROP);
+      if (StringUtils.isNotBlank(val)) {
+        try {
+          Class.forName(val).newInstance();
+        }
+        catch (Exception ex) {
+          LOGGER.error("Could not initialize initialzer class properly!", ex);
+        }
+      }
       BeanFactoryRegistrar.aggregate(api);
     }
   }
