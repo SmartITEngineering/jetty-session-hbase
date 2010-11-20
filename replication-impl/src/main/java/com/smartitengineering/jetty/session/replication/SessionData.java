@@ -47,13 +47,15 @@ public class SessionData extends AbstractGenericPersistentDTO<SessionData, Strin
   private String virtualHost;
   private SessionIdManager manager;
 
-  SessionData(String sessionId, SessionIdManager idManager) {
+  public SessionData(String sessionId, SessionIdManager idManager) {
     this.manager = idManager;
     id = sessionId;
     created = System.currentTimeMillis();
     accessed = created;
     attributes = new ConcurrentHashMap();
-    lastNode = manager.getWorkerName();
+    if (manager != null) {
+      lastNode = manager.getWorkerName();
+    }
   }
 
   @Override
@@ -65,7 +67,7 @@ public class SessionData extends AbstractGenericPersistentDTO<SessionData, Strin
     return created;
   }
 
-  protected synchronized void setCreated(long ms) {
+  public synchronized void setCreated(long ms) {
     this.created = ms;
   }
 
