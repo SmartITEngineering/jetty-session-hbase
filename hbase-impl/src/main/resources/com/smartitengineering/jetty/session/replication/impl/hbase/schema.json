@@ -1,0 +1,21 @@
+[
+  {
+    "tableName": "sessiondata",
+    "columnFamilyConfigurations": [
+      {
+        "familyName": "self"
+      },
+      {
+        "familyName": "attributes"
+      }
+    ]
+  },
+  {
+    "tableName": "sessionid",
+    "columnFamilyConfigurations": [
+      {
+        "familyName": "self"
+      }
+    ]
+  }
+]
