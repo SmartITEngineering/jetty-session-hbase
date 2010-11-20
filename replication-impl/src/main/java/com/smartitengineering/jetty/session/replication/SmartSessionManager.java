@@ -128,7 +128,7 @@ public class SmartSessionManager extends AbstractSessionManager {
 
     public Session(HttpServletRequest request) {
       super(request);
-      sessionData = new SessionData(getId(), _sessionIdManager);
+      sessionData = new SessionData(getId(), _sessionIdManager.getWorkerName());
     }
 
     Session(SessionData sessionData) {
