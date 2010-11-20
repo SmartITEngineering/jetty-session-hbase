@@ -41,6 +41,14 @@
       <artifactId>smart-hbase-dao</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.smartitengineering.smart-dao</groupId>
+      <artifactId>hbase-ddl-util</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.smartitengineering.smart-util</groupId>
+      <artifactId>smart-bean-guice-util</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
