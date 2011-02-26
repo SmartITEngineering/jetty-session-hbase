@@ -54,11 +54,13 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
 
   @Override
   public boolean idInUse(String id) {
+    logger.info("idInUse");
     return SessionReplicationAPI.getInstance().getIdReader().getById(id) != null;
   }
 
   @Override
   public void addSession(HttpSession httpSession) {
+    logger.info("addSession");
     if (httpSession == null || !(httpSession instanceof Session)) {
       return;
     }
@@ -76,6 +78,7 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
 
   @Override
   public void removeSession(HttpSession httpSession) {
+    logger.info("removeSession");
     if (httpSession == null || !(httpSession instanceof Session)) {
       return;
     }
@@ -85,6 +88,7 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
   }
 
   protected void removeSession(final String clusterId) {
+    logger.info("removeSession");
     try {
       SessionId sessionId =
                 SessionReplicationAPI.getInstance().getIdReader().getById(clusterId);
@@ -99,6 +103,7 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
 
   @Override
   public void invalidateAll(String id) {
+    logger.info("invalidateAll");
     //take the id out of the list of known sessionids for this node
     removeSession(id);
 
@@ -122,12 +127,14 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
 
   @Override
   public String getClusterId(String nodeId) {
+    logger.info("getClusterId");
     int dot = nodeId.lastIndexOf('.');
     return (dot > 0) ? nodeId.substring(0, dot) : nodeId;
   }
 
   @Override
   public String getNodeId(String clusterId, HttpServletRequest request) {
+    logger.info("getNodeId");
     if (_workerName != null) {
       return clusterId + '.' + _workerName;
     }

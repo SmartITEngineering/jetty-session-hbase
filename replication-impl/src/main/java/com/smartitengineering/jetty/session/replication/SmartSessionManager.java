@@ -40,6 +40,7 @@ public class SmartSessionManager extends AbstractSessionManager {
 
   @Override
   public Map getSessionMap() {
+    logger.info("getSessionMap");
     semaphore.acquireUninterruptibly();
     try {
       Collection<SessionData> data = SessionReplicationAPI.getInstance().getDataReader().getAll();
@@ -59,6 +60,7 @@ public class SmartSessionManager extends AbstractSessionManager {
 
   @Override
   protected void addSession(AbstractSessionManager.Session sn) {
+    logger.info("addSession");
     semaphore.acquireUninterruptibly();
     try {
       Session session = (SmartSessionManager.Session) sn;
@@ -71,6 +73,7 @@ public class SmartSessionManager extends AbstractSessionManager {
 
   @Override
   public Session getSession(String string) {
+    logger.info("getSession");
     semaphore.acquireUninterruptibly();
     try {
       SessionData data = SessionReplicationAPI.getInstance().getDataReader().getById(string);
@@ -92,6 +95,7 @@ public class SmartSessionManager extends AbstractSessionManager {
   }
 
   protected void invalidateSession(String idInCluster) {
+    logger.info("invalidateSession");
     semaphore.acquireUninterruptibly();
     try {
       Session session = null;
@@ -110,11 +114,24 @@ public class SmartSessionManager extends AbstractSessionManager {
 
   @Override
   protected Session newSession(HttpServletRequest hsr) {
+    logger.info("newSession");
     semaphore.acquireUninterruptibly();
     try {
       final Session session = new SmartSessionManager.Session(hsr);
       createSession(session);
       return session;
+    }
+    finally {
+      semaphore.release();
+    }
+  }
+
+  @Override
+  protected boolean removeSession(String idInCluster) {
+    logger.info("getSessionMap");
+    semaphore.acquireUninterruptibly();
+    try {
+      return deleteSession(getSession(idInCluster));
     }
     finally {
       semaphore.release();
@@ -156,17 +173,6 @@ public class SmartSessionManager extends AbstractSessionManager {
     catch (Exception ex) {
       logger.error("Could not delete session to write dao!", ex);
       return false;
-    }
-  }
-
-  @Override
-  protected boolean removeSession(String idInCluster) {
-    semaphore.acquireUninterruptibly();
-    try {
-      return deleteSession(getSession(idInCluster));
-    }
-    finally {
-      semaphore.release();
     }
   }
 
