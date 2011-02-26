@@ -41,9 +41,13 @@ public class HBaseReplicationPersistenseInitializer {
   }
 
   private void init() {
+    logger.info("Initializing factory!");
     GuiceUtil.getInstance("com/smartitengineering/jetty/session/replication/impl/hbase/HBaseImpl.properties").register();
+    logger.info("Guice injection done!");
     Configuration config = HBaseConfigurationFactory.getConfigurationInstance();
+    logger.info("HBase configuration retrieved!");
     try {
+      logger.info("Trying to create tables!");
       new HBaseTableGenerator(ConfigurationJsonParser.getConfigurations(getClass().getClassLoader().
           getResourceAsStream("com/smartitengineering/jetty/session/replication/impl/hbase/schema.json")), config,
                               false).generateTables();

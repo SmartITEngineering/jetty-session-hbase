@@ -41,8 +41,10 @@ public class SessionReplicationAPI {
 
   public static SessionReplicationAPI getInstance() {
     if (api == null) {
+      LOGGER.info("Initializing Replication API");
       init();
     }
+    LOGGER.info("Returning initialized API");
     return api;
   }
 
@@ -50,6 +52,9 @@ public class SessionReplicationAPI {
     if (api == null) {
       api = new SessionReplicationAPI();
       String val = System.getProperty(INITIALIZER_CLASS_SYS_PROP);
+      if (LOGGER.isInfoEnabled()) {
+        LOGGER.info("System parameter of the initializer " + val);
+      }
       if (StringUtils.isNotBlank(val)) {
         try {
           Class.forName(val).newInstance();

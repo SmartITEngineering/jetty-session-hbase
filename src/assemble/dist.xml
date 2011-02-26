@@ -19,14 +19,14 @@
         <include>*:*</include>
       </includes>
       <binaries>
-        <outputDirectory>lib/</outputDirectory>
+        <outputDirectory>hbase-session-replication/</outputDirectory>
         <unpack>false</unpack>
         <dependencySets>
           <dependencySet>
             <includes>
               <include>*:*</include>
             </includes>
-            <outputDirectory>lib/</outputDirectory>
+            <outputDirectory>hbase-session-replication/</outputDirectory>
           </dependencySet>
         </dependencySets>
       </binaries>
