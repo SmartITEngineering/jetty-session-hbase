@@ -77,7 +77,12 @@ public class SmartSessionManager extends AbstractSessionManager {
     semaphore.acquireUninterruptibly();
     try {
       SessionData data = SessionReplicationAPI.getInstance().getDataReader().getById(string);
-      return new Session(data);
+      if (data != null) {
+        return new Session(data);
+      }
+      else {
+        return null;
+      }
     }
     finally {
       semaphore.release();
