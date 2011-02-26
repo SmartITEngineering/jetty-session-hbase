@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.http.HttpServletRequest;
 import org.eclipse.jetty.server.session.AbstractSessionManager;
 import org.slf4j.Logger;
@@ -90,13 +89,11 @@ public class SmartSessionManager extends AbstractSessionManager {
     return session;
   }
 
-  @Override
-  protected void removeSession(String string) {
-    deleteSession(getSession(string));
-  }
-
   protected void createSession(Session session) {
     try {
+      if (logger.isInfoEnabled()) {
+        logger.info("Creating session with id " + session.sessionData.getId());
+      }
       SessionReplicationAPI.getInstance().getDataWriter().save(session.sessionData);
     }
     catch (Exception ex) {
@@ -106,6 +103,9 @@ public class SmartSessionManager extends AbstractSessionManager {
 
   protected void updateSession(Session session) {
     try {
+      if (logger.isInfoEnabled()) {
+        logger.info("Updating session with id " + session.sessionData.getId());
+      }
       SessionReplicationAPI.getInstance().getDataWriter().update(session.sessionData);
     }
     catch (Exception ex) {
@@ -113,13 +113,23 @@ public class SmartSessionManager extends AbstractSessionManager {
     }
   }
 
-  protected void deleteSession(Session session) {
+  protected boolean deleteSession(Session session) {
     try {
+      if (logger.isInfoEnabled()) {
+        logger.info("Deleting session with id " + session.sessionData.getId());
+      }
       SessionReplicationAPI.getInstance().getDataWriter().delete(session.sessionData);
+      return true;
     }
     catch (Exception ex) {
       logger.error("Could not delete session to write dao!", ex);
+      return false;
     }
+  }
+
+  @Override
+  protected boolean removeSession(String idInCluster) {
+    return deleteSession(getSession(idInCluster));
   }
 
   public class Session extends AbstractSessionManager.Session {
@@ -134,12 +144,6 @@ public class SmartSessionManager extends AbstractSessionManager {
     Session(SessionData sessionData) {
       super(sessionData.getCreated(), sessionData.getAccessed(), sessionData.getId());
       this.sessionData = sessionData;
-    }
-
-    @Override
-    protected Map newAttributeMap() {
-      final ConcurrentHashMap map = new ConcurrentHashMap();
-      return map;
     }
 
     @Override
