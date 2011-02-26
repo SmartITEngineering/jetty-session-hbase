@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
 import javax.servlet.http.HttpServletRequest;
 import org.eclipse.jetty.server.session.AbstractSessionManager;
 import org.slf4j.Logger;
@@ -35,30 +36,49 @@ import org.slf4j.LoggerFactory;
 public class SmartSessionManager extends AbstractSessionManager {
 
   protected final Logger logger = LoggerFactory.getLogger(getClass());
+  protected final Semaphore semaphore = new Semaphore(1);
 
   @Override
-  public synchronized Map getSessionMap() {
-    Collection<SessionData> data = SessionReplicationAPI.getInstance().getDataReader().getAll();
-    if (data == null) {
-      return Collections.emptyMap();
+  public Map getSessionMap() {
+    semaphore.acquireUninterruptibly();
+    try {
+      Collection<SessionData> data = SessionReplicationAPI.getInstance().getDataReader().getAll();
+      if (data == null) {
+        return Collections.emptyMap();
+      }
+      Map sessions = new HashMap(data.size());
+      for (SessionData datum : data) {
+        sessions.put(datum.getId(), sessions.put(datum.getId(), new Session(datum)));
+      }
+      return sessions;
     }
-    Map sessions = new HashMap(data.size());
-    for (SessionData datum : data) {
-      sessions.put(datum.getId(), sessions.put(datum.getId(), new Session(datum)));
+    finally {
+      semaphore.release();
     }
-    return sessions;
   }
 
   @Override
   protected void addSession(AbstractSessionManager.Session sn) {
-    Session session = (SmartSessionManager.Session) sn;
-    updateSession(session);
+    semaphore.acquireUninterruptibly();
+    try {
+      Session session = (SmartSessionManager.Session) sn;
+      updateSession(session);
+    }
+    finally {
+      semaphore.release();
+    }
   }
 
   @Override
   public Session getSession(String string) {
-    SessionData data = SessionReplicationAPI.getInstance().getDataReader().getById(string);
-    return new Session(data);
+    semaphore.acquireUninterruptibly();
+    try {
+      SessionData data = SessionReplicationAPI.getInstance().getDataReader().getById(string);
+      return new Session(data);
+    }
+    finally {
+      semaphore.release();
+    }
   }
 
   @Override
@@ -72,21 +92,33 @@ public class SmartSessionManager extends AbstractSessionManager {
   }
 
   protected void invalidateSession(String idInCluster) {
-    Session session = null;
-    synchronized (this) {
-      session = new Session(SessionReplicationAPI.getInstance().getDataReader().getById(idInCluster));
-    }
+    semaphore.acquireUninterruptibly();
+    try {
+      Session session = null;
+      synchronized (this) {
+        session = new Session(SessionReplicationAPI.getInstance().getDataReader().getById(idInCluster));
+      }
 
-    if (session != null) {
-      session.invalidate();
+      if (session != null) {
+        session.invalidate();
+      }
+    }
+    finally {
+      semaphore.release();
     }
   }
 
   @Override
   protected Session newSession(HttpServletRequest hsr) {
-    final Session session = new SmartSessionManager.Session(hsr);
-    createSession(session);
-    return session;
+    semaphore.acquireUninterruptibly();
+    try {
+      final Session session = new SmartSessionManager.Session(hsr);
+      createSession(session);
+      return session;
+    }
+    finally {
+      semaphore.release();
+    }
   }
 
   protected void createSession(Session session) {
@@ -129,7 +161,13 @@ public class SmartSessionManager extends AbstractSessionManager {
 
   @Override
   protected boolean removeSession(String idInCluster) {
-    return deleteSession(getSession(idInCluster));
+    semaphore.acquireUninterruptibly();
+    try {
+      return deleteSession(getSession(idInCluster));
+    }
+    finally {
+      semaphore.release();
+    }
   }
 
   public class Session extends AbstractSessionManager.Session {
@@ -148,10 +186,16 @@ public class SmartSessionManager extends AbstractSessionManager {
 
     @Override
     protected void complete() {
-      super.complete();
-      willPassivate();
-      updateSession(this);
-      didActivate();
+      semaphore.acquireUninterruptibly();
+      try {
+        super.complete();
+        willPassivate();
+        updateSession(this);
+        didActivate();
+      }
+      finally {
+        semaphore.release();
+      }
     }
 
     @Override
