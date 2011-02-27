@@ -22,9 +22,14 @@ package com.smartitengineering.jetty.session.replication.impl.hbase;
 import com.smartitengineering.dao.impl.hbase.spi.ExecutorService;
 import com.smartitengineering.dao.impl.hbase.spi.impl.AbstractObjectRowConverter;
 import com.smartitengineering.jetty.session.replication.SessionData;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.Map;
-import java.util.Map.Entry;
+import org.apache.commons.io.input.ClassLoaderObjectInputStream;
+import org.apache.commons.lang.SerializationException;
 import org.apache.commons.lang.SerializationUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.client.Delete;
@@ -109,7 +114,7 @@ public class SessionDataObjectConverter extends AbstractObjectRowConverter<Sessi
       data.setVirtualHost(getString(startRow, FAMILY_SELF, CELL_VIRTUAL_HOST));
       byte[] attrs = startRow.getValue(FAMILY_SELF, CELL_ATTRIBUTE_MAP);
       if (attrs != null) {
-        data.setAttributeMap((Map) SerializationUtils.deserialize(attrs));
+        data.setAttributeMap((Map) deserialize(attrs));
       }
       return data;
     }
@@ -139,5 +144,42 @@ public class SessionDataObjectConverter extends AbstractObjectRowConverter<Sessi
     else {
       return Bytes.toString(val);
     }
+  }
+
+  private static Object deserialize(InputStream inputStream) {
+    if (inputStream == null) {
+      throw new IllegalArgumentException("The InputStream must not be null");
+    }
+    ObjectInputStream in = null;
+    try {
+      // stream closed in the finally
+      in = new ClassLoaderObjectInputStream(Thread.currentThread().getContextClassLoader(), inputStream);
+      return in.readObject();
+
+    }
+    catch (ClassNotFoundException ex) {
+      throw new SerializationException(ex);
+    }
+    catch (IOException ex) {
+      throw new SerializationException(ex);
+    }
+    finally {
+      try {
+        if (in != null) {
+          in.close();
+        }
+      }
+      catch (IOException ex) {
+        // ignore close exception
+      }
+    }
+  }
+
+  private static Object deserialize(byte[] objectData) {
+    if (objectData == null) {
+      throw new IllegalArgumentException("The byte[] must not be null");
+    }
+    ByteArrayInputStream bais = new ByteArrayInputStream(objectData);
+    return deserialize(bais);
   }
 }
