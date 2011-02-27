@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.servlet.http.HttpServletRequest;
 import org.eclipse.jetty.server.session.AbstractSessionManager;
 import org.slf4j.Logger;
@@ -188,6 +189,7 @@ public class SmartSessionManager extends AbstractSessionManager {
   public class Session extends AbstractSessionManager.Session {
 
     private SessionData sessionData;
+    private final AtomicBoolean dirty = new AtomicBoolean(false);
 
     public Session(HttpServletRequest request) {
       super(request);
@@ -201,15 +203,18 @@ public class SmartSessionManager extends AbstractSessionManager {
 
     @Override
     protected void complete() {
-      semaphore.acquireUninterruptibly();
-      try {
-        super.complete();
+      super.complete();
+      if (dirty.get()) {
         willPassivate();
-        updateSession(this);
+        semaphore.acquireUninterruptibly();
+        try {
+          updateSession(this);
+        }
+        finally {
+          semaphore.release();
+        }
         didActivate();
-      }
-      finally {
-        semaphore.release();
+        dirty.compareAndSet(true, false);
       }
     }
 
@@ -222,12 +227,14 @@ public class SmartSessionManager extends AbstractSessionManager {
     public void setAttribute(String name, Object value) {
       super.setAttribute(name, value);
       sessionData.setAttribute(name, value);
+      dirty.compareAndSet(false, true);
     }
 
     @Override
     public void removeAttribute(String name) {
       super.removeAttribute(name);
       sessionData.removeAttribute(name);
+      dirty.compareAndSet(false, true);
     }
 
     @Override
