@@ -136,13 +136,17 @@ public class SmartSessionManager extends AbstractSessionManager {
   @Override
   protected boolean removeSession(String idInCluster) {
     logger.info("getSessionMap");
-    semaphore.acquireUninterruptibly();
-    try {
-      return deleteSession(getSession(idInCluster));
+    final Session session = getSession(idInCluster);
+    if (session != null) {
+      semaphore.acquireUninterruptibly();
+      try {
+        return deleteSession(session);
+      }
+      finally {
+        semaphore.release();
+      }
     }
-    finally {
-      semaphore.release();
-    }
+    return false;
   }
 
   protected void createSession(Session session) {
