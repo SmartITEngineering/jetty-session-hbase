@@ -67,7 +67,7 @@ public class SessionReplicationAPI {
     }
   }
   @InjectableField(beanName = "dataReader")
-  private CommonReadDao<SessionData, String> dataReader;
+  private CommonReadDao<SessionData, SessionDataId> dataReader;
   @InjectableField(beanName = "dataWriter")
   private CommonWriteDao<SessionData> dataWriter;
   @InjectableField(beanName = "idReader")
@@ -75,7 +75,7 @@ public class SessionReplicationAPI {
   @InjectableField(beanName = "idWriter")
   private CommonWriteDao<SessionId> idWriter;
 
-  public CommonReadDao<SessionData, String> getDataReader() {
+  public CommonReadDao<SessionData, SessionDataId> getDataReader() {
     return dataReader;
   }
 

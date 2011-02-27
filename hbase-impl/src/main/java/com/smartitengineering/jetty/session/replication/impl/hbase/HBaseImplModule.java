@@ -24,7 +24,6 @@ import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import com.google.inject.util.Providers;
 import com.smartitengineering.dao.common.CommonReadDao;
 import com.smartitengineering.dao.common.CommonWriteDao;
 import com.smartitengineering.dao.impl.hbase.CommonDao;
@@ -44,6 +43,7 @@ import com.smartitengineering.dao.impl.hbase.spi.impl.SchemaInfoProviderImpl;
 import com.smartitengineering.dao.impl.hbase.spi.impl.guice.GenericBaseConfigProvider;
 import com.smartitengineering.dao.impl.hbase.spi.impl.guice.GenericFilterConfigsProvider;
 import com.smartitengineering.jetty.session.replication.SessionData;
+import com.smartitengineering.jetty.session.replication.SessionDataId;
 import com.smartitengineering.jetty.session.replication.SessionId;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -63,15 +63,17 @@ public class HBaseImplModule extends AbstractModule {
     bind(Long.class).annotatedWith(Names.named("waitTime")).toInstance(5l);
     bind(TimeUnit.class).annotatedWith(Names.named("unit")).toInstance(TimeUnit.SECONDS);
     bind(Boolean.class).annotatedWith(Names.named("mergeEnabled")).toInstance(Boolean.TRUE);
-    bind(DomainIdInstanceProvider.class).toProvider(Providers.<DomainIdInstanceProvider>of(null));
+    bind(DomainIdInstanceProvider.class).to(SessionDataIdInstanceProvider.class).in(Singleton.class);
     bind(LockType.class).toInstance(LockType.PESSIMISTIC);
+    bind(new TypeLiteral<Class<SessionDataId>>() {
+    }).toInstance(SessionDataId.class);
     bind(new TypeLiteral<Class<String>>() {
     }).toInstance(String.class);
 
 
     bind(new TypeLiteral<ObjectRowConverter<SessionData>>() {
     }).to(SessionDataObjectConverter.class).in(Singleton.class);
-    bind(CommonReadDao.class).annotatedWith(Names.named("dataReader")).to(new TypeLiteral<CommonReadDao<SessionData, String>>() {
+    bind(CommonReadDao.class).annotatedWith(Names.named("dataReader")).to(new TypeLiteral<CommonReadDao<SessionData, SessionDataId>>() {
     });
     bind(CommonReadDao.class).annotatedWith(Names.named("idReader")).to(new TypeLiteral<CommonReadDao<SessionId, String>>() {
     });
@@ -79,24 +81,24 @@ public class HBaseImplModule extends AbstractModule {
     });
     bind(CommonWriteDao.class).annotatedWith(Names.named("idWriter")).to(new TypeLiteral<CommonWriteDao<SessionId>>() {
     });
-    bind(new TypeLiteral<CommonReadDao<SessionData, String>>() {
-    }).to(new TypeLiteral<com.smartitengineering.dao.common.CommonDao<SessionData, String>>() {
+    bind(new TypeLiteral<CommonReadDao<SessionData, SessionDataId>>() {
+    }).to(new TypeLiteral<com.smartitengineering.dao.common.CommonDao<SessionData, SessionDataId>>() {
     }).in(Singleton.class);
     bind(new TypeLiteral<CommonWriteDao<SessionData>>() {
-    }).to(new TypeLiteral<com.smartitengineering.dao.common.CommonDao<SessionData, String>>() {
+    }).to(new TypeLiteral<com.smartitengineering.dao.common.CommonDao<SessionData, SessionDataId>>() {
     }).in(Singleton.class);
-    bind(new TypeLiteral<com.smartitengineering.dao.common.CommonDao<SessionData, String>>() {
-    }).to(new TypeLiteral<CommonDao<SessionData, String>>() {
+    bind(new TypeLiteral<com.smartitengineering.dao.common.CommonDao<SessionData, SessionDataId>>() {
+    }).to(new TypeLiteral<CommonDao<SessionData, SessionDataId>>() {
     }).in(Singleton.class);
-    final TypeLiteral<SchemaInfoProviderImpl<SessionData, String>> typeLiteral = new TypeLiteral<SchemaInfoProviderImpl<SessionData, String>>() {
+    final TypeLiteral<SchemaInfoProviderImpl<SessionData, SessionDataId>> typeLiteral = new TypeLiteral<SchemaInfoProviderImpl<SessionData, SessionDataId>>() {
     };
-    bind(new TypeLiteral<MergeService<SessionData, String>>() {
-    }).to(new TypeLiteral<DiffBasedMergeService<SessionData, String>>() {
+    bind(new TypeLiteral<MergeService<SessionData, SessionDataId>>() {
+    }).to(new TypeLiteral<DiffBasedMergeService<SessionData, SessionDataId>>() {
     });
-    bind(new TypeLiteral<LockAttainer<SessionData, String>>() {
-    }).to(new TypeLiteral<LockAttainerImpl<SessionData, String>>() {
+    bind(new TypeLiteral<LockAttainer<SessionData, SessionDataId>>() {
+    }).to(new TypeLiteral<LockAttainerImpl<SessionData, SessionDataId>>() {
     }).in(Scopes.SINGLETON);
-    bind(new TypeLiteral<SchemaInfoProvider<SessionData, String>>() {
+    bind(new TypeLiteral<SchemaInfoProvider<SessionData, SessionDataId>>() {
     }).to(typeLiteral).in(Singleton.class);
     bind(new TypeLiteral<FilterConfigs<SessionData>>() {
     }).toProvider(new GenericFilterConfigsProvider<SessionData>(

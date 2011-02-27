@@ -24,6 +24,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -35,12 +36,21 @@ import org.slf4j.LoggerFactory;
  *
  * @author imyousuf
  */
-public class SessionDataId implements Externalizable {
+public class SessionDataId implements Externalizable, Serializable, Comparable<SessionDataId> {
 
-  private String id;
+  private String inClusterId;
   private String canonicalContextPath;
   private String virtualHost;
   protected final transient Logger logger = LoggerFactory.getLogger(getClass());
+
+  public SessionDataId(String id, String canonicalContextPath, String virtualHost) {
+    this.inClusterId = id;
+    this.canonicalContextPath = canonicalContextPath;
+    this.virtualHost = virtualHost;
+  }
+
+  public SessionDataId() {
+  }
 
   public String getCanonicalContextPath() {
     return canonicalContextPath;
@@ -50,12 +60,12 @@ public class SessionDataId implements Externalizable {
     this.canonicalContextPath = canonicalContextPath;
   }
 
-  public String getId() {
-    return id;
+  public String getInClusterId() {
+    return inClusterId;
   }
 
-  public void setId(String id) {
-    this.id = id;
+  public void setInClusterId(String id) {
+    this.inClusterId = id;
   }
 
   public String getVirtualHost() {
@@ -75,7 +85,7 @@ public class SessionDataId implements Externalizable {
       return false;
     }
     final SessionDataId other = (SessionDataId) obj;
-    if ((this.id == null) ? (other.id != null) : !this.id.equals(other.id)) {
+    if ((this.inClusterId == null) ? (other.inClusterId != null) : !this.inClusterId.equals(other.inClusterId)) {
       return false;
     }
     if ((this.canonicalContextPath == null) ? (other.canonicalContextPath != null) : !this.canonicalContextPath.equals(
@@ -91,7 +101,7 @@ public class SessionDataId implements Externalizable {
   @Override
   public int hashCode() {
     int hash = 5;
-    hash = 79 * hash + (this.id != null ? this.id.hashCode() : 0);
+    hash = 79 * hash + (this.inClusterId != null ? this.inClusterId.hashCode() : 0);
     hash = 79 * hash + (this.canonicalContextPath != null ? this.canonicalContextPath.hashCode() : 0);
     hash = 79 * hash + (this.virtualHost != null ? this.virtualHost.hashCode() : 0);
     return hash;
@@ -99,7 +109,7 @@ public class SessionDataId implements Externalizable {
 
   @Override
   public String toString() {
-    return new StringBuilder().append(id).append(':').append(canonicalContextPath).append(':').append(virtualHost).
+    return new StringBuilder().append(inClusterId).append(':').append(canonicalContextPath).append(':').append(virtualHost).
         toString();
   }
 
@@ -122,7 +132,7 @@ public class SessionDataId implements Externalizable {
       throw new IOException(
           "Object should have been in the format id:canonicalpath:virtualhost");
     }
-    setId(params[0]);
+    setInClusterId(params[0]);
     setCanonicalContextPath(params[1]);
     setVirtualHost(params[2]);
   }
@@ -147,5 +157,15 @@ public class SessionDataId implements Externalizable {
     }
     String string = StringUtils.newStringUtf8(Arrays.copyOf(buffer.array(), length));
     return string;
+  }
+
+  @Override
+  public int compareTo(SessionDataId o) {
+    if (o == null) {
+      return 1;
+    }
+    else {
+      return toString().compareTo(o.toString());
+    }
   }
 }

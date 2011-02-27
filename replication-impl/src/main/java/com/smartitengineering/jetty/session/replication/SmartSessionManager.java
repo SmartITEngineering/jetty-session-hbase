@@ -215,7 +215,8 @@ public class SmartSessionManager extends AbstractSessionManager {
     logger.info("invalidateSession");
     semaphore.acquireUninterruptibly();
     try {
-      final SessionData sessionData = SessionReplicationAPI.getInstance().getDataReader().getById(idInCluster);
+      final SessionData sessionData = SessionReplicationAPI.getInstance().getDataReader().getById(getSessionDataId(
+          idInCluster));
       if (sessionData == null) {
         return;
       }
@@ -228,7 +229,7 @@ public class SmartSessionManager extends AbstractSessionManager {
   }
 
   protected SessionData loadSession(String string) {
-    SessionData data = SessionReplicationAPI.getInstance().getDataReader().getById(string);
+    SessionData data = SessionReplicationAPI.getInstance().getDataReader().getById(getSessionDataId(string));
     if (data != null) {
       logger.info("Returning session");
       return data;
@@ -285,6 +286,10 @@ public class SmartSessionManager extends AbstractSessionManager {
     this.saveInterval = saveInterval;
   }
 
+  protected SessionDataId getSessionDataId(String inClusterId) throws IllegalStateException {
+    return new SessionDataId(inClusterId, canonicalize(_context.getContextPath()), getVirtualHost(_context));
+  }
+
   public class Session extends AbstractSessionManager.Session {
 
     private SessionData sessionData;
@@ -292,7 +297,7 @@ public class SmartSessionManager extends AbstractSessionManager {
 
     public Session(HttpServletRequest request) {
       super(request);
-      sessionData = new SessionData(getId(), _sessionIdManager.getWorkerName());
+      sessionData = new SessionData(getSessionDataId(getId()), _sessionIdManager.getWorkerName());
     }
 
     Session(SessionData sessionData) {
@@ -301,7 +306,7 @@ public class SmartSessionManager extends AbstractSessionManager {
     }
 
     Session(long accessed, SessionData sessionData) {
-      super(sessionData.getCreated(), accessed, sessionData.getId());
+      super(sessionData.getCreated(), accessed, sessionData.getId().getInClusterId());
       this.sessionData = sessionData;
     }
 

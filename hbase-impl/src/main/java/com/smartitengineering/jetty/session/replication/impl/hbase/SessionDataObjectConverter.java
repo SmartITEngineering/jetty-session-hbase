@@ -22,6 +22,7 @@ package com.smartitengineering.jetty.session.replication.impl.hbase;
 import com.smartitengineering.dao.impl.hbase.spi.ExecutorService;
 import com.smartitengineering.dao.impl.hbase.spi.impl.AbstractObjectRowConverter;
 import com.smartitengineering.jetty.session.replication.SessionData;
+import com.smartitengineering.jetty.session.replication.SessionDataId;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,7 +42,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  *
  * @author imyousuf
  */
-public class SessionDataObjectConverter extends AbstractObjectRowConverter<SessionData, String> {
+public class SessionDataObjectConverter extends AbstractObjectRowConverter<SessionData, SessionDataId> {
 
   public static final byte[] FAMILY_SELF = Bytes.toBytes("self");
   public static final byte[] CELL_ROW_ID = Bytes.toBytes("rowId");

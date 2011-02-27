@@ -29,9 +29,9 @@ import org.apache.commons.lang.StringUtils;
  *
  * @author imyousuf
  */
-public class SessionData extends AbstractGenericPersistentDTO<SessionData, String, Long> {
+public class SessionData extends AbstractGenericPersistentDTO<SessionData, SessionDataId, Long> {
 
-  private final String id;
+  private final SessionDataId id;
   private String rowId;
   private long accessed;
   private long lastAccessed;
@@ -45,15 +45,15 @@ public class SessionData extends AbstractGenericPersistentDTO<SessionData, Strin
   private long expiryTime;
   private String virtualHost;
 
-  public SessionData(String sessionId, String lastNode) {
-    id = sessionId;
+  public SessionData(SessionDataId dataId, String lastNode) {
+    id = dataId;
     created = System.currentTimeMillis();
     accessed = created;
     attributes = new ConcurrentHashMap();
   }
 
   @Override
-  public synchronized String getId() {
+  public synchronized SessionDataId getId() {
     return id;
   }
 
@@ -176,6 +176,6 @@ public class SessionData extends AbstractGenericPersistentDTO<SessionData, Strin
 
   @Override
   public boolean isValid() {
-    return StringUtils.isNotBlank(getId());
+    return getId() != null;
   }
 }
