@@ -19,14 +19,17 @@
  */
 package com.smartitengineering.jetty.session.replication;
 
-import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSessionEvent;
+import javax.servlet.http.HttpSessionListener;
+import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.session.AbstractSessionManager;
+import org.eclipse.jetty.util.LazyList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,55 +42,90 @@ public class SmartSessionManager extends AbstractSessionManager {
   protected final Logger logger = LoggerFactory.getLogger(getClass());
   protected final Semaphore semaphore = new Semaphore(1);
   private final static long DEFAULT_INTERVAL = 300;
+  private Map<String, Session> sessions;
   private long saveInterval = 0;
+
+  @Override
+  public void doStart() throws Exception {
+    super.doStart();
+    sessions = new ConcurrentHashMap<String, SmartSessionManager.Session>();
+  }
+
+  @Override
+  public void doStop() throws Exception {
+    super.doStop();
+    sessions.clear();
+    sessions = null;
+  }
+
+  @Override
+  public int getSessions() {
+    return sessions.size();
+  }
 
   @Override
   public Map getSessionMap() {
     logger.info("getSessionMap");
-    semaphore.acquireUninterruptibly();
-    try {
-      Collection<SessionData> data = SessionReplicationAPI.getInstance().getDataReader().getAll();
-      if (data == null) {
-        return Collections.emptyMap();
-      }
-      Map sessions = new HashMap(data.size());
-      for (SessionData datum : data) {
-        sessions.put(datum.getId(), sessions.put(datum.getId(), new Session(datum)));
-      }
-      return sessions;
-    }
-    finally {
-      semaphore.release();
-    }
+    return Collections.unmodifiableMap(sessions);
   }
 
   @Override
   protected void addSession(AbstractSessionManager.Session sn) {
     logger.info("addSession");
-    semaphore.acquireUninterruptibly();
     try {
       Session session = (SmartSessionManager.Session) sn;
-      updateSession(session);
+      sessions.put(session.getClusterId(), session);
+      session.willPassivate();
+      semaphore.acquireUninterruptibly();
+      try {
+        updateSession(session);
+      }
+      finally {
+        semaphore.release();
+      }
+      session.didActivate();
     }
-    finally {
-      semaphore.release();
+    catch (Exception ex) {
+      logger.warn("Could not add session!", ex);
     }
   }
 
   @Override
-  public Session getSession(String string) {
+  public Session getSession(String idInCluster) {
     logger.info("getSession");
     semaphore.acquireUninterruptibly();
     try {
-      SessionData data = SessionReplicationAPI.getInstance().getDataReader().getById(string);
-      if (data != null) {
-        logger.info("Returning session");
-        return new Session(data);
+      Session session = sessions.get(idInCluster);
+      final SessionData data;
+      long now = System.currentTimeMillis();
+      if (session == null || ((now - session.sessionData.getLastSaved()) >= (getSaveInterval() * 1000))) {
+        data = loadSession(idInCluster);
+      }
+      else if ((now - session.sessionData.getLastSaved()) >= (getSaveInterval() * 1000)) {
+        data = loadSession(idInCluster);
       }
       else {
-        logger.info("No session data thus returning null");
-        return null;
+        data = session.sessionData;
       }
+      if (data != null) {
+        if (!data.getLastNode().equals(getIdManager().getWorkerName()) || session == null) {
+          //if the session in the database has not already expired
+          if (data.getExpiryTime() > now) {
+            //session last used on a different node, or we don't have it in memory
+            session = new Session(now, data);
+            sessions.put(idInCluster, session);
+            session.didActivate();
+            data.setLastNode(getIdManager().getWorkerName());
+            updateSession(session);
+          }
+        }
+      }
+      else {
+        //No session in db with matching id and context path.
+        session = null;
+      }
+
+      return session;
     }
     finally {
       semaphore.release();
@@ -102,6 +140,75 @@ public class SmartSessionManager extends AbstractSessionManager {
     //because this context is stopping does not
     //mean that we should remove the session from
     //any other nodes;
+  }
+
+  @Override
+  protected Session newSession(HttpServletRequest hsr) {
+    logger.info("newSession");
+    semaphore.acquireUninterruptibly();
+    try {
+      final Session session = new SmartSessionManager.Session(hsr);
+      createSession(session);
+      return session;
+    }
+    finally {
+      semaphore.release();
+    }
+  }
+
+  @Override
+  public void removeSession(AbstractSessionManager.Session sn, boolean invalidate) {
+    // Remove session from context and global maps
+    boolean removed = false;
+    Session session = (SmartSessionManager.Session) sn;
+
+    semaphore.acquireUninterruptibly();
+    try {
+      //take this session out of the map of sessions for this context
+      if (getSession(session.getClusterId()) != null) {
+        removed = true;
+        removeSession(session.getClusterId());
+      }
+    }
+    finally {
+      semaphore.release();
+    }
+
+    if (removed) {
+      // Remove session from all context and global id maps
+      _sessionIdManager.removeSession(session);
+
+      if (invalidate) {
+        _sessionIdManager.invalidateAll(session.getClusterId());
+      }
+
+      if (invalidate && _sessionListeners != null) {
+        HttpSessionEvent event = new HttpSessionEvent(session);
+        for (int i = LazyList.size(_sessionListeners); i-- > 0;) {
+          ((HttpSessionListener) LazyList.get(_sessionListeners, i)).sessionDestroyed(event);
+        }
+      }
+      if (!invalidate) {
+        session.willPassivate();
+      }
+    }
+  }
+
+  @Override
+  protected boolean removeSession(String idInCluster) {
+    logger.info("getSessionMap");
+    final Session session = getSession(idInCluster);
+    if (session != null) {
+      semaphore.acquireUninterruptibly();
+      try {
+        sessions.remove(idInCluster);
+        return deleteSession(session);
+      }
+      finally {
+        semaphore.release();
+      }
+    }
+    return false;
   }
 
   protected void invalidateSession(String idInCluster) {
@@ -120,34 +227,16 @@ public class SmartSessionManager extends AbstractSessionManager {
     }
   }
 
-  @Override
-  protected Session newSession(HttpServletRequest hsr) {
-    logger.info("newSession");
-    semaphore.acquireUninterruptibly();
-    try {
-      final Session session = new SmartSessionManager.Session(hsr);
-      createSession(session);
-      return session;
+  protected SessionData loadSession(String string) {
+    SessionData data = SessionReplicationAPI.getInstance().getDataReader().getById(string);
+    if (data != null) {
+      logger.info("Returning session");
+      return data;
     }
-    finally {
-      semaphore.release();
+    else {
+      logger.info("No session data thus returning null");
+      return null;
     }
-  }
-
-  @Override
-  protected boolean removeSession(String idInCluster) {
-    logger.info("getSessionMap");
-    final Session session = getSession(idInCluster);
-    if (session != null) {
-      semaphore.acquireUninterruptibly();
-      try {
-        return deleteSession(session);
-      }
-      finally {
-        semaphore.release();
-      }
-    }
-    return false;
   }
 
   protected void createSession(Session session) {
@@ -207,8 +296,23 @@ public class SmartSessionManager extends AbstractSessionManager {
     }
 
     Session(SessionData sessionData) {
-      super(sessionData.getCreated(), sessionData.getAccessed(), sessionData.getId());
+      this(sessionData.getAccessed(), sessionData);
+
+    }
+
+    Session(long accessed, SessionData sessionData) {
+      super(sessionData.getCreated(), accessed, sessionData.getId());
       this.sessionData = sessionData;
+    }
+
+    @Override
+    protected void didActivate() {
+      super.didActivate();
+    }
+
+    @Override
+    protected void willPassivate() {
+      super.willPassivate();
     }
 
     @Override
@@ -262,5 +366,28 @@ public class SmartSessionManager extends AbstractSessionManager {
         dirty.compareAndSet(false, true);
       }
     }
+  }
+
+  private String getVirtualHost(ContextHandler.Context context) {
+    String vhost = "0.0.0.0";
+
+    if (context == null) {
+      return vhost;
+    }
+
+    String[] vhosts = context.getContextHandler().getVirtualHosts();
+    if (vhosts == null || vhosts.length == 0 || vhosts[0] == null) {
+      return vhost;
+    }
+
+    return vhosts[0];
+  }
+
+  private String canonicalize(String path) {
+    if (path == null) {
+      return "";
+    }
+
+    return path.replace('/', '_').replace('.', '_').replace('\\', '_');
   }
 }
