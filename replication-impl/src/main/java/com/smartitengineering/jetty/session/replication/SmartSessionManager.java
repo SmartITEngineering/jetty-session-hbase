@@ -78,9 +78,11 @@ public class SmartSessionManager extends AbstractSessionManager {
     try {
       SessionData data = SessionReplicationAPI.getInstance().getDataReader().getById(string);
       if (data != null) {
+        logger.info("Returning session");
         return new Session(data);
       }
       else {
+        logger.info("No session data thus returning null");
         return null;
       }
     }
