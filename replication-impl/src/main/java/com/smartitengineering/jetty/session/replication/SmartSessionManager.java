@@ -38,6 +38,8 @@ public class SmartSessionManager extends AbstractSessionManager {
 
   protected final Logger logger = LoggerFactory.getLogger(getClass());
   protected final Semaphore semaphore = new Semaphore(1);
+  private final static long DEFAULT_INTERVAL = 300;
+  private long saveInterval = 0;
 
   @Override
   public Map getSessionMap() {
@@ -186,6 +188,14 @@ public class SmartSessionManager extends AbstractSessionManager {
     }
   }
 
+  public long getSaveInterval() {
+    return saveInterval <= 0 ? DEFAULT_INTERVAL : saveInterval;
+  }
+
+  public void setSaveInterval(long saveInterval) {
+    this.saveInterval = saveInterval;
+  }
+
   public class Session extends AbstractSessionManager.Session {
 
     private SessionData sessionData;
@@ -248,6 +258,9 @@ public class SmartSessionManager extends AbstractSessionManager {
       sessionData.setLastAccessed(sessionData.getAccessed());
       sessionData.setAccessed(time);
       sessionData.setExpiryTime(_maxIdleMs < 0 ? 0 : (time + _maxIdleMs));
+      if ((sessionData.getAccessed() - sessionData.getLastSaved()) >= (getSaveInterval() * 1000)) {
+        dirty.compareAndSet(false, true);
+      }
     }
   }
 }
