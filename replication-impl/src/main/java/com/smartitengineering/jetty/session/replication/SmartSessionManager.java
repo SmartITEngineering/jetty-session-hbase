@@ -105,14 +105,12 @@ public class SmartSessionManager extends AbstractSessionManager {
     logger.info("invalidateSession");
     semaphore.acquireUninterruptibly();
     try {
-      Session session = null;
-      synchronized (this) {
-        session = new Session(SessionReplicationAPI.getInstance().getDataReader().getById(idInCluster));
+      final SessionData sessionData = SessionReplicationAPI.getInstance().getDataReader().getById(idInCluster);
+      if (sessionData == null) {
+        return;
       }
-
-      if (session != null) {
-        session.invalidate();
-      }
+      Session session = new Session(sessionData);
+      session.invalidate();
     }
     finally {
       semaphore.release();
