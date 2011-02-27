@@ -4,9 +4,6 @@
     "columnFamilyConfigurations": [
       {
         "familyName": "self"
-      },
-      {
-        "familyName": "attributes"
       }
     ]
   },

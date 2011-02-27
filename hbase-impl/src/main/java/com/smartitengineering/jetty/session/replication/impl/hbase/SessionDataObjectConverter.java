@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class SessionDataObjectConverter extends AbstractObjectRowConverter<SessionData, String> {
 
   public static final byte[] FAMILY_SELF = Bytes.toBytes("self");
-  public static final byte[] FAMILY_ATTRS = Bytes.toBytes("attributes");
   public static final byte[] CELL_ROW_ID = Bytes.toBytes("rowId");
   public static final byte[] CELL_ACCESSED = Bytes.toBytes("accessed");
   public static final byte[] CELL_LAST_ACCESSED = Bytes.toBytes("lastAccessed");
@@ -51,6 +50,7 @@ public class SessionDataObjectConverter extends AbstractObjectRowConverter<Sessi
   public static final byte[] CELL_LAST_SAVED = Bytes.toBytes("lastSaved");
   public static final byte[] CELL_EXPIRY_TIME = Bytes.toBytes("expiryTime");
   public static final byte[] CELL_VIRTUAL_HOST = Bytes.toBytes("virtualHost");
+  public static final byte[] CELL_ATTRIBUTE_MAP = Bytes.toBytes("attributes");
 
   @Override
   protected String[] getTablesToAttainLock() {
@@ -82,10 +82,8 @@ public class SessionDataObjectConverter extends AbstractObjectRowConverter<Sessi
       put.add(FAMILY_SELF, CELL_VIRTUAL_HOST, Bytes.toBytes(instance.getVirtualHost()));
     }
     Map<String, Object> attrs = instance.getAttributeMap();
-    for (Entry<String, Object> attr : attrs.entrySet()) {
-      if (attr != null && attr.getKey() != null && attr.getValue() != null) {
-        put.add(FAMILY_ATTRS, Bytes.toBytes(attr.getKey()), SerializationUtils.serialize((Serializable) attr.getValue()));
-      }
+    if (attrs != null && !attrs.isEmpty()) {
+      put.add(FAMILY_SELF, CELL_ATTRIBUTE_MAP, SerializationUtils.serialize((Serializable) attrs));
     }
   }
 
@@ -109,11 +107,9 @@ public class SessionDataObjectConverter extends AbstractObjectRowConverter<Sessi
       data.setMaxIdleMs(getLong(startRow, FAMILY_SELF, CELL_MAX_IDLE_MS));
       data.setRowId(getString(startRow, FAMILY_SELF, CELL_ROW_ID));
       data.setVirtualHost(getString(startRow, FAMILY_SELF, CELL_VIRTUAL_HOST));
-      Map<byte[], byte[]> attrs = startRow.getFamilyMap(FAMILY_ATTRS);
-      if (attrs != null && !attrs.isEmpty()) {
-        for (Entry<byte[], byte[]> attr : attrs.entrySet()) {
-          data.setAttribute(Bytes.toString(attr.getKey()), SerializationUtils.deserialize(attr.getValue()));
-        }
+      byte[] attrs = startRow.getValue(FAMILY_SELF, CELL_ATTRIBUTE_MAP);
+      if (attrs != null) {
+        data.setAttributeMap((Map) SerializationUtils.deserialize(attrs));
       }
       return data;
     }
