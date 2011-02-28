@@ -171,13 +171,14 @@ public class SmartSessionManager extends AbstractSessionManager {
     // Remove session from context and global maps
     boolean removed = false;
     Session session = (SmartSessionManager.Session) sn;
-
     semaphore.acquireUninterruptibly();
     try {
       //take this session out of the map of sessions for this context
-      if (getSession(session.getClusterId()) != null) {
+      final SessionData data = loadSession(session.getClusterId());
+      if (data != null) {
         removed = true;
-        removeSession(session.getClusterId());
+        sessions.remove(session.getClusterId());
+        removed = deleteSession(session);
       }
     }
     finally {
@@ -186,10 +187,10 @@ public class SmartSessionManager extends AbstractSessionManager {
 
     if (removed) {
       // Remove session from all context and global id maps
-      _sessionIdManager.removeSession(session);
+      getIdManager().removeSession(session);
 
       if (invalidate) {
-        _sessionIdManager.invalidateAll(session.getClusterId());
+        getIdManager().invalidateAll(session.getClusterId());
       }
 
       if (invalidate && _sessionListeners != null) {
