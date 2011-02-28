@@ -73,9 +73,7 @@ public class SessionDataObjectConverter extends AbstractObjectRowConverter<Sessi
     put.add(FAMILY_SELF, CELL_CREATED, Bytes.toBytes(instance.getCreated()));
     put.add(FAMILY_SELF, CELL_EXPIRY_TIME, Bytes.toBytes(instance.getExpiryTime()));
     put.add(FAMILY_SELF, CELL_LAST_ACCESSED, Bytes.toBytes(instance.getLastAccessed()));
-    if (StringUtils.isNotBlank(instance.getLastNode())) {
-      put.add(FAMILY_SELF, CELL_LAST_NODE, Bytes.toBytes(instance.getLastNode()));
-    }
+    put.add(FAMILY_SELF, CELL_LAST_NODE, Bytes.toBytes(instance.getLastNode()));
     put.add(FAMILY_SELF, CELL_LAST_SAVED, Bytes.toBytes(instance.getLastSaved()));
     put.add(FAMILY_SELF, CELL_MAX_IDLE_MS, Bytes.toBytes(instance.getMaxIdleMs()));
     Map<String, Object> attrs = instance.getAttributeMap();
@@ -92,13 +90,13 @@ public class SessionDataObjectConverter extends AbstractObjectRowConverter<Sessi
   @Override
   public SessionData rowsToObject(Result startRow, ExecutorService executorService) {
     try {
-      SessionData data = new SessionData(getInfoProvider().getIdFromRowId(startRow.getRow()), null);
+      final String lastNode = getString(startRow, FAMILY_SELF, CELL_LAST_NODE);
+      SessionData data = new SessionData(getInfoProvider().getIdFromRowId(startRow.getRow()), lastNode);
       data.setAccessed(getLong(startRow, FAMILY_SELF, CELL_ACCESSED));
       data.setCookieSet(getLong(startRow, FAMILY_SELF, CELL_COOKIE_SET));
       data.setCreated(getLong(startRow, FAMILY_SELF, CELL_CREATED));
       data.setExpiryTime(getLong(startRow, FAMILY_SELF, CELL_EXPIRY_TIME));
       data.setLastAccessed(getLong(startRow, FAMILY_SELF, CELL_LAST_ACCESSED));
-      data.setLastNode(getString(startRow, FAMILY_SELF, CELL_LAST_NODE));
       data.setLastSaved(getLong(startRow, FAMILY_SELF, CELL_LAST_SAVED));
       data.setMaxIdleMs(getLong(startRow, FAMILY_SELF, CELL_MAX_IDLE_MS));
       byte[] attrs = startRow.getValue(FAMILY_SELF, CELL_ATTRIBUTE_MAP);

@@ -23,6 +23,7 @@ import com.smartitengineering.domain.AbstractGenericPersistentDTO;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.apache.commons.lang.StringUtils;
 
 /**
  *
@@ -42,6 +43,12 @@ public class SessionData extends AbstractGenericPersistentDTO<SessionData, Sessi
   private long expiryTime;
 
   public SessionData(SessionDataId dataId, String lastNode) {
+    if (StringUtils.isBlank(lastNode)) {
+      throw new IllegalArgumentException("Null node");
+    }
+    if (dataId == null) {
+      throw new IllegalArgumentException("Null session data id");
+    }
     id = dataId;
     created = System.currentTimeMillis();
     accessed = created;
