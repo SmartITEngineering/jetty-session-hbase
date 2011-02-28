@@ -107,6 +107,10 @@ public class SmartSessionManager extends AbstractSessionManager {
       else {
         data = session.sessionData;
       }
+      if (logger.isInfoEnabled()) {
+        logger.info("Session Data " + data);
+        logger.info("Current node " + getIdManager().getWorkerName());
+      }
       if (data != null) {
         if (!data.getLastNode().equals(getIdManager().getWorkerName()) || session == null) {
           //if the session in the database has not already expired
@@ -124,8 +128,14 @@ public class SmartSessionManager extends AbstractSessionManager {
         //No session in db with matching id and context path.
         session = null;
       }
-
+      if (logger.isInfoEnabled()) {
+        logger.info("Returning session " + session);
+      }
       return session;
+    }
+    catch (RuntimeException ex) {
+      logger.warn("Exception retrieving session", ex);
+      throw ex;
     }
     finally {
       semaphore.release();
