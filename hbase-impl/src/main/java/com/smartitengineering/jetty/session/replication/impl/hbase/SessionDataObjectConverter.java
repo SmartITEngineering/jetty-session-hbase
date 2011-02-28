@@ -69,9 +69,6 @@ public class SessionDataObjectConverter extends AbstractObjectRowConverter<Sessi
       return;
     }
     put.add(FAMILY_SELF, CELL_ACCESSED, Bytes.toBytes(instance.getAccessed()));
-    if (StringUtils.isNotBlank(instance.getCanonicalContext())) {
-      put.add(FAMILY_SELF, CELL_CANNONICAL_CONTEXT, Bytes.toBytes(instance.getCanonicalContext()));
-    }
     put.add(FAMILY_SELF, CELL_COOKIE_SET, Bytes.toBytes(instance.getCookieSet()));
     put.add(FAMILY_SELF, CELL_CREATED, Bytes.toBytes(instance.getCreated()));
     put.add(FAMILY_SELF, CELL_EXPIRY_TIME, Bytes.toBytes(instance.getExpiryTime()));
@@ -81,12 +78,6 @@ public class SessionDataObjectConverter extends AbstractObjectRowConverter<Sessi
     }
     put.add(FAMILY_SELF, CELL_LAST_SAVED, Bytes.toBytes(instance.getLastSaved()));
     put.add(FAMILY_SELF, CELL_MAX_IDLE_MS, Bytes.toBytes(instance.getMaxIdleMs()));
-    if (StringUtils.isNotBlank(instance.getRowId())) {
-      put.add(FAMILY_SELF, CELL_ROW_ID, Bytes.toBytes(instance.getRowId()));
-    }
-    if (StringUtils.isNotBlank(instance.getVirtualHost())) {
-      put.add(FAMILY_SELF, CELL_VIRTUAL_HOST, Bytes.toBytes(instance.getVirtualHost()));
-    }
     Map<String, Object> attrs = instance.getAttributeMap();
     if (attrs != null && !attrs.isEmpty()) {
       put.add(FAMILY_SELF, CELL_ATTRIBUTE_MAP, SerializationUtils.serialize((Serializable) attrs));
@@ -103,7 +94,6 @@ public class SessionDataObjectConverter extends AbstractObjectRowConverter<Sessi
     try {
       SessionData data = new SessionData(getInfoProvider().getIdFromRowId(startRow.getRow()), null);
       data.setAccessed(getLong(startRow, FAMILY_SELF, CELL_ACCESSED));
-      data.setCanonicalContext(getString(startRow, FAMILY_SELF, CELL_CANNONICAL_CONTEXT));
       data.setCookieSet(getLong(startRow, FAMILY_SELF, CELL_COOKIE_SET));
       data.setCreated(getLong(startRow, FAMILY_SELF, CELL_CREATED));
       data.setExpiryTime(getLong(startRow, FAMILY_SELF, CELL_EXPIRY_TIME));
@@ -111,8 +101,6 @@ public class SessionDataObjectConverter extends AbstractObjectRowConverter<Sessi
       data.setLastNode(getString(startRow, FAMILY_SELF, CELL_LAST_NODE));
       data.setLastSaved(getLong(startRow, FAMILY_SELF, CELL_LAST_SAVED));
       data.setMaxIdleMs(getLong(startRow, FAMILY_SELF, CELL_MAX_IDLE_MS));
-      data.setRowId(getString(startRow, FAMILY_SELF, CELL_ROW_ID));
-      data.setVirtualHost(getString(startRow, FAMILY_SELF, CELL_VIRTUAL_HOST));
       byte[] attrs = startRow.getValue(FAMILY_SELF, CELL_ATTRIBUTE_MAP);
       if (attrs != null) {
         data.setAttributeMap((Map) deserialize(attrs));

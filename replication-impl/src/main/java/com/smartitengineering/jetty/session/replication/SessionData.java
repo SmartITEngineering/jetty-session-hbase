@@ -31,7 +31,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SessionData extends AbstractGenericPersistentDTO<SessionData, SessionDataId, Long> {
 
   private final SessionDataId id;
-  private String rowId;
   private long accessed;
   private long lastAccessed;
   private long maxIdleMs;
@@ -39,15 +38,14 @@ public class SessionData extends AbstractGenericPersistentDTO<SessionData, Sessi
   private long created;
   private Map attributes;
   private String lastNode;
-  private String canonicalContext;
   private long lastSaved;
   private long expiryTime;
-  private String virtualHost;
 
   public SessionData(SessionDataId dataId, String lastNode) {
     id = dataId;
     created = System.currentTimeMillis();
     accessed = created;
+    this.lastNode = lastNode;
     attributes = new ConcurrentHashMap();
   }
 
@@ -96,14 +94,6 @@ public class SessionData extends AbstractGenericPersistentDTO<SessionData, Sessi
     return cookieSet;
   }
 
-  public synchronized void setRowId(String rowId) {
-    this.rowId = rowId;
-  }
-
-  public synchronized String getRowId() {
-    return rowId;
-  }
-
   public void setAttribute(String key, Object val) {
     attributes.put(key, val);
   }
@@ -133,14 +123,6 @@ public class SessionData extends AbstractGenericPersistentDTO<SessionData, Sessi
     return lastNode;
   }
 
-  public synchronized void setCanonicalContext(String str) {
-    this.canonicalContext = str;
-  }
-
-  public synchronized String getCanonicalContext() {
-    return canonicalContext;
-  }
-
   public synchronized long getLastSaved() {
     return this.lastSaved;
   }
@@ -157,17 +139,9 @@ public class SessionData extends AbstractGenericPersistentDTO<SessionData, Sessi
     return expiryTime;
   }
 
-  public synchronized void setVirtualHost(String vhost) {
-    this.virtualHost = vhost;
-  }
-
-  public synchronized String getVirtualHost() {
-    return virtualHost;
-  }
-
   @Override
   public String toString() {
-    return "Session rowId=" + rowId + ",id=" + id + ",lastNode=" + lastNode +
+    return "Session id=" + id + ",lastNode=" + lastNode +
         ",created=" + created + ",accessed=" + accessed +
         ",lastAccessed=" + lastAccessed + ",cookieSet=" + cookieSet +
         "lastSaved=" + lastSaved;
