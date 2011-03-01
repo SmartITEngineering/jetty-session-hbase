@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.SessionManager;
@@ -58,8 +59,10 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
 
   @Override
   public boolean idInUse(String id) {
-    logger.info("idInUse");
-    if (id == null) {
+    if (logger.isInfoEnabled()) {
+      logger.info("idInUse " + id);
+    }
+    if (StringUtils.isBlank(id)) {
       return false;
     }
     String clusterId = getClusterId(id);

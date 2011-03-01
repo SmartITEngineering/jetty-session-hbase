@@ -68,6 +68,7 @@ public class SessionDataObjectConverter extends AbstractObjectRowConverter<Sessi
     if (instance == null) {
       return;
     }
+    instance.setLastSaved(System.currentTimeMillis());
     put.add(FAMILY_SELF, CELL_ACCESSED, Bytes.toBytes(instance.getAccessed()));
     put.add(FAMILY_SELF, CELL_COOKIE_SET, Bytes.toBytes(instance.getCookieSet()));
     put.add(FAMILY_SELF, CELL_CREATED, Bytes.toBytes(instance.getCreated()));
@@ -76,9 +77,15 @@ public class SessionDataObjectConverter extends AbstractObjectRowConverter<Sessi
     put.add(FAMILY_SELF, CELL_LAST_NODE, Bytes.toBytes(instance.getLastNode()));
     put.add(FAMILY_SELF, CELL_LAST_SAVED, Bytes.toBytes(instance.getLastSaved()));
     put.add(FAMILY_SELF, CELL_MAX_IDLE_MS, Bytes.toBytes(instance.getMaxIdleMs()));
-    Map<String, Object> attrs = instance.getAttributeMap();
+    Map attrs = instance.getAttributeMap();
     if (attrs != null && !attrs.isEmpty()) {
+      if (logger.isInfoEnabled()) {
+        logger.info("Serialzed attributes " + attrs);
+      }
       put.add(FAMILY_SELF, CELL_ATTRIBUTE_MAP, SerializationUtils.serialize((Serializable) attrs));
+    }
+    else {
+      logger.info("No attributes to serialize");
     }
   }
 
@@ -101,7 +108,14 @@ public class SessionDataObjectConverter extends AbstractObjectRowConverter<Sessi
       data.setMaxIdleMs(getLong(startRow, FAMILY_SELF, CELL_MAX_IDLE_MS));
       byte[] attrs = startRow.getValue(FAMILY_SELF, CELL_ATTRIBUTE_MAP);
       if (attrs != null) {
-        data.setAttributeMap((Map) deserialize(attrs));
+        final Map attributes = (Map) deserialize(attrs);
+        if (logger.isInfoEnabled()) {
+          logger.info("Deserialzed attributes as " + attributes);
+        }
+        data.setAttributeMap(attributes);
+      }
+      else {
+        logger.info("No attributes to deserialize");
       }
       return data;
     }

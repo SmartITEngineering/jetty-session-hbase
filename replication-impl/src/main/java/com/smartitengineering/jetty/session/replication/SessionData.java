@@ -52,6 +52,7 @@ public class SessionData extends AbstractGenericPersistentDTO<SessionData, Sessi
     id = dataId;
     created = System.currentTimeMillis();
     accessed = created;
+    lastAccessed = accessed;
     this.lastNode = lastNode;
     attributes = new ConcurrentHashMap();
   }
@@ -151,7 +152,7 @@ public class SessionData extends AbstractGenericPersistentDTO<SessionData, Sessi
     return "Session id=" + id + ",lastNode=" + lastNode +
         ",created=" + created + ",accessed=" + accessed +
         ",lastAccessed=" + lastAccessed + ",cookieSet=" + cookieSet +
-        "lastSaved=" + lastSaved;
+        ",lastSaved=" + lastSaved + ",attributes=" + attributes + ",expiryTime=" + expiryTime;
   }
 
   @Override

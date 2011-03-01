@@ -42,6 +42,7 @@ public class SmartSessionManager extends AbstractSessionManager {
   protected final Logger logger = LoggerFactory.getLogger(getClass());
   protected final ReentrantLock lock = new ReentrantLock();
   private final static long DEFAULT_INTERVAL = 300;
+  private final static long DEFAULT_EXPIRY_TIME = 24 * 60 * 60 * 1000;
   private Map<String, Session> sessions;
   private long saveInterval = 0;
 
@@ -98,11 +99,9 @@ public class SmartSessionManager extends AbstractSessionManager {
       Session session = sessions.get(idInCluster);
       final SessionData data;
       long now = System.currentTimeMillis();
-      if (session == null || ((now - session.sessionData.getLastSaved()) >= (getSaveInterval() * 1000))) {
+      if (session == null || now > session.sessionData.getLastSaved()) {
         data = loadSession(idInCluster);
-      }
-      else if ((now - session.sessionData.getLastSaved()) >= (getSaveInterval() * 1000)) {
-        data = loadSession(idInCluster);
+        session = null;
       }
       else {
         data = session.sessionData;
@@ -116,11 +115,13 @@ public class SmartSessionManager extends AbstractSessionManager {
           //if the session in the database has not already expired
           if (data.getExpiryTime() > now) {
             //session last used on a different node, or we don't have it in memory
+            logger.info("not within expiry time");
             session = new Session(now, data);
+            if ((data.getAccessed() - data.getLastSaved()) >= (getSaveInterval() * 1000)) {
+              updateSession(session);
+            }
             sessions.put(idInCluster, session);
             session.didActivate();
-            data.setLastNode(getIdManager().getWorkerName());
-            updateSession(session);
           }
         }
       }
@@ -245,7 +246,9 @@ public class SmartSessionManager extends AbstractSessionManager {
   protected SessionData loadSession(String string) {
     SessionData data = SessionReplicationAPI.getInstance().getDataReader().getById(getSessionDataId(string));
     if (data != null) {
-      logger.info("Returning session");
+      if (logger.isInfoEnabled()) {
+        logger.info("Returning session " + data);
+      }
       return data;
     }
     else {
@@ -269,7 +272,7 @@ public class SmartSessionManager extends AbstractSessionManager {
   protected void updateSession(Session session) {
     try {
       if (logger.isInfoEnabled()) {
-        logger.info("Updating session with id " + session.sessionData.getId());
+        logger.info("Updating session with " + session.sessionData);
       }
       SessionReplicationAPI.getInstance().getDataWriter().update(session.sessionData);
     }
@@ -312,16 +315,19 @@ public class SmartSessionManager extends AbstractSessionManager {
     public Session(HttpServletRequest request) {
       super(request);
       sessionData = new SessionData(getSessionDataId(getId()), getIdManager().getWorkerName());
+      access(sessionData.getAccessed());
     }
 
     Session(SessionData sessionData) {
       this(sessionData.getAccessed(), sessionData);
-
     }
 
     Session(long accessed, SessionData sessionData) {
       super(sessionData.getCreated(), accessed, sessionData.getId().getInClusterId());
       this.sessionData = sessionData;
+      this.sessionData.setLastNode(getIdManager().getWorkerName());
+      _attributes.putAll(sessionData.getAttributeMap());
+      access(accessed);
     }
 
     @Override
@@ -376,14 +382,19 @@ public class SmartSessionManager extends AbstractSessionManager {
     }
 
     @Override
-    protected void access(long time) {
+    protected final void access(long time) {
       super.access(time);
       sessionData.setLastAccessed(sessionData.getAccessed());
       sessionData.setAccessed(time);
-      sessionData.setExpiryTime(_maxIdleMs < 0 ? 0 : (time + _maxIdleMs));
+      sessionData.setExpiryTime(_maxIdleMs < 0 ? DEFAULT_EXPIRY_TIME : (time + _maxIdleMs));
       if ((sessionData.getAccessed() - sessionData.getLastSaved()) >= (getSaveInterval() * 1000)) {
         dirty.compareAndSet(false, true);
       }
+    }
+
+    @Override
+    public String toString() {
+      return "Session{" + "sessionData=" + sessionData + ",dirty=" + dirty.get() + '}';
     }
   }
 
