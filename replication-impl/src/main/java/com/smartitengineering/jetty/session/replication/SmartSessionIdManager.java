@@ -70,7 +70,7 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
     }
     //otherwise, we need to go to the database to check
     try {
-      return SessionReplicationAPI.getInstance().getIdReader().getById(id) != null;
+      return SessionReplicationAPI.getInstance().getIdReader().getById(clusterId) != null;
     }
     catch (Exception e) {
       logger.warn("Problem checking inUse for id=" + clusterId, e);
