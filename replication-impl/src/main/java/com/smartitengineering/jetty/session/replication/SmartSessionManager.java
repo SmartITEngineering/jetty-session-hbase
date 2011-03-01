@@ -22,8 +22,8 @@ package com.smartitengineering.jetty.session.replication;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSessionListener;
@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 public class SmartSessionManager extends AbstractSessionManager {
 
   protected final Logger logger = LoggerFactory.getLogger(getClass());
-  protected final Semaphore semaphore = new Semaphore(1);
+  protected final ReentrantLock lock = new ReentrantLock();
   private final static long DEFAULT_INTERVAL = 300;
   private Map<String, Session> sessions;
   private long saveInterval = 0;
@@ -76,12 +76,12 @@ public class SmartSessionManager extends AbstractSessionManager {
       Session session = (SmartSessionManager.Session) sn;
       sessions.put(session.getClusterId(), session);
       session.willPassivate();
-      semaphore.acquireUninterruptibly();
+      lock.lock();
       try {
         updateSession(session);
       }
       finally {
-        semaphore.release();
+        lock.unlock();
       }
       session.didActivate();
     }
@@ -93,7 +93,7 @@ public class SmartSessionManager extends AbstractSessionManager {
   @Override
   public Session getSession(String idInCluster) {
     logger.info("getSession");
-    semaphore.acquireUninterruptibly();
+    lock.lock();
     try {
       Session session = sessions.get(idInCluster);
       final SessionData data;
@@ -138,7 +138,7 @@ public class SmartSessionManager extends AbstractSessionManager {
       throw ex;
     }
     finally {
-      semaphore.release();
+      lock.unlock();
     }
   }
 
@@ -155,7 +155,7 @@ public class SmartSessionManager extends AbstractSessionManager {
   @Override
   protected Session newSession(HttpServletRequest hsr) {
     logger.info("newSession");
-    semaphore.acquireUninterruptibly();
+    lock.lock();
     try {
       final Session session = new SmartSessionManager.Session(hsr);
       SessionData sessionData = loadSession(session.getId());
@@ -165,7 +165,7 @@ public class SmartSessionManager extends AbstractSessionManager {
       return session;
     }
     finally {
-      semaphore.release();
+      lock.unlock();
     }
   }
 
@@ -174,7 +174,7 @@ public class SmartSessionManager extends AbstractSessionManager {
     // Remove session from context and global maps
     boolean removed = false;
     Session session = (SmartSessionManager.Session) sn;
-    semaphore.acquireUninterruptibly();
+    lock.lock();
     try {
       //take this session out of the map of sessions for this context
       final SessionData data = loadSession(session.getClusterId());
@@ -185,7 +185,7 @@ public class SmartSessionManager extends AbstractSessionManager {
       }
     }
     finally {
-      semaphore.release();
+      lock.unlock();
     }
 
     if (removed) {
@@ -213,13 +213,13 @@ public class SmartSessionManager extends AbstractSessionManager {
     logger.info("getSessionMap");
     final Session session = getSession(idInCluster);
     if (session != null) {
-      semaphore.acquireUninterruptibly();
+      lock.lock();
       try {
         sessions.remove(idInCluster);
         return deleteSession(session);
       }
       finally {
-        semaphore.release();
+        lock.unlock();
       }
     }
     return false;
@@ -227,7 +227,7 @@ public class SmartSessionManager extends AbstractSessionManager {
 
   protected void invalidateSession(String idInCluster) {
     logger.info("invalidateSession");
-    semaphore.acquireUninterruptibly();
+    lock.lock();
     try {
       final SessionData sessionData = SessionReplicationAPI.getInstance().getDataReader().getById(getSessionDataId(
           idInCluster));
@@ -238,7 +238,7 @@ public class SmartSessionManager extends AbstractSessionManager {
       session.invalidate();
     }
     finally {
-      semaphore.release();
+      lock.unlock();
     }
   }
 
@@ -339,12 +339,12 @@ public class SmartSessionManager extends AbstractSessionManager {
       super.complete();
       if (dirty.get()) {
         willPassivate();
-        semaphore.acquireUninterruptibly();
+        lock.lock();
         try {
           updateSession(this);
         }
         finally {
-          semaphore.release();
+          lock.unlock();
         }
         didActivate();
         dirty.compareAndSet(true, false);
