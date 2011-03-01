@@ -158,7 +158,10 @@ public class SmartSessionManager extends AbstractSessionManager {
     semaphore.acquireUninterruptibly();
     try {
       final Session session = new SmartSessionManager.Session(hsr);
-      createSession(session);
+      SessionData sessionData = loadSession(session.getId());
+      if (sessionData == null) {
+        createSession(session);
+      }
       return session;
     }
     finally {
