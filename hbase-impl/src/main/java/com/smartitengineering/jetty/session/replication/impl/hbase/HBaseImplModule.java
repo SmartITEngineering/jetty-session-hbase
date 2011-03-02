@@ -45,15 +45,30 @@ import com.smartitengineering.dao.impl.hbase.spi.impl.guice.GenericFilterConfigs
 import com.smartitengineering.jetty.session.replication.SessionData;
 import com.smartitengineering.jetty.session.replication.SessionDataId;
 import com.smartitengineering.jetty.session.replication.SessionId;
+import java.io.InputStream;
+import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import net.sf.ehcache.Cache;
+import net.sf.ehcache.CacheManager;
 
 /**
  *
  * @author imyousuf
  */
 public class HBaseImplModule extends AbstractModule {
+
+  private final String cacheConfigRsrc, sessionCacheName, sessionIdCacheName;
+
+  public HBaseImplModule(Properties properties) {
+    cacheConfigRsrc = properties.getProperty("com.smartitengineering.jetty.session.replication",
+                                             "com/smartitengineering/jetty/session/replication/impl/hbase/ehcache.xml");
+    sessionCacheName = properties.getProperty("com.smartitengineering.jetty.session.replication.sessionCache.name",
+                                              "sessionCache");
+    sessionIdCacheName = properties.getProperty("com.smartitengineering.jetty.session.replication.sessionIdCache.name",
+                                                "sessionIdCache");
+  }
 
   @Override
   protected void configure() {
@@ -138,5 +153,23 @@ public class HBaseImplModule extends AbstractModule {
     }).toProvider(new GenericBaseConfigProvider<SessionId>(
         "com/smartitengineering/jetty/session/replication/impl/hbase/SessionIdSchemaBaseConfig.json")).in(
         Scopes.SINGLETON);
+    /*
+     * Configure Cache
+     */
+    InputStream inputStream = getClass().getClassLoader().getResourceAsStream(cacheConfigRsrc);
+    if (inputStream == null) {
+      throw new IllegalArgumentException("Cache configuration not available!");
+    }
+    CacheManager cacheManager = new CacheManager(inputStream);
+    Cache sessionCache = cacheManager.getCache(sessionCacheName);
+    if (sessionCache == null) {
+      throw new IllegalStateException("Could not retrieve cache!");
+    }
+    bind(Cache.class).annotatedWith(Names.named("sessionCache")).toInstance(sessionCache);
+    Cache sessionIdCache = cacheManager.getCache(sessionIdCacheName);
+    if (sessionIdCache == null) {
+      throw new IllegalStateException("Could not retrieve cache!");
+    }
+    bind(Cache.class).annotatedWith(Names.named("sessionIdCache")).toInstance(sessionIdCache);
   }
 }

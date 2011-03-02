@@ -24,6 +24,7 @@ import com.smartitengineering.dao.common.CommonWriteDao;
 import com.smartitengineering.util.bean.BeanFactoryRegistrar;
 import com.smartitengineering.util.bean.annotations.Aggregator;
 import com.smartitengineering.util.bean.annotations.InjectableField;
+import net.sf.ehcache.Cache;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,6 +75,18 @@ public class SessionReplicationAPI {
   private CommonReadDao<SessionId, String> idReader;
   @InjectableField(beanName = "idWriter")
   private CommonWriteDao<SessionId> idWriter;
+  @InjectableField(beanName = "sessionCache")
+  private Cache sessionCache;
+  @InjectableField(beanName = "sessionIdCache")
+  private Cache sessionIdCache;
+
+  public Cache getSessionCache() {
+    return sessionCache;
+  }
+
+  public Cache getSessionIdCache() {
+    return sessionIdCache;
+  }
 
   public CommonReadDao<SessionData, SessionDataId> getDataReader() {
     return dataReader;

@@ -1,3 +1,4 @@
 contextName=com.smartitengineering.jetty.session.replication
 modules.0=com.smartitengineering.jetty.session.replication.impl.hbase.HBaseImplModule
 ignoreMissingDependency=false
+com.smartitengineering.jetty.session.replication=com/smartitengineering/jetty/session/replication/impl/hbase/ehcache.xml
