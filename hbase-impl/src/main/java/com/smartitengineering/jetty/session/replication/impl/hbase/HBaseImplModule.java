@@ -52,6 +52,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -60,8 +62,12 @@ import net.sf.ehcache.CacheManager;
 public class HBaseImplModule extends AbstractModule {
 
   private final String cacheConfigRsrc, sessionCacheName, sessionIdCacheName;
+  protected final transient Logger logger = LoggerFactory.getLogger(getClass());
 
   public HBaseImplModule(Properties properties) {
+    if (logger.isInfoEnabled()) {
+      logger.info("DI properties " + properties);
+    }
     cacheConfigRsrc = properties.getProperty("com.smartitengineering.jetty.session.replication",
                                              "com/smartitengineering/jetty/session/replication/impl/hbase/ehcache.xml");
     sessionCacheName = properties.getProperty("com.smartitengineering.jetty.session.replication.sessionCache.name",

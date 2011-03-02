@@ -22,10 +22,11 @@ package com.smartitengineering.jetty.session.replication;
 import com.smartitengineering.jetty.session.replication.SmartSessionManager.Session;
 import java.util.Date;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import net.sf.ehcache.Cache;
+import net.sf.ehcache.Element;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -33,7 +34,6 @@ import org.eclipse.jetty.server.SessionManager;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.session.AbstractSessionIdManager;
 import org.eclipse.jetty.server.session.SessionHandler;
-import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +46,7 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
   protected final Logger logger = LoggerFactory.getLogger(getClass());
   private final Server server;
   private final ReentrantLock lock = new ReentrantLock();
-  private final Set<String> sessionIds = new ConcurrentHashSet<String>();
+  private Cache sessionIds;
 
   public SmartSessionIdManager(Server server, Random random) {
     super(random);
@@ -55,6 +55,12 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
 
   public SmartSessionIdManager(Server server) {
     this.server = server;
+  }
+
+  @Override
+  protected void doStart() throws Exception {
+    super.doStart();
+    sessionIds = SessionReplicationAPI.getInstance().getSessionIdCache();
   }
 
   @Override
@@ -67,7 +73,7 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
     }
     String clusterId = getClusterId(id);
     boolean inUse = false;
-    inUse = sessionIds.contains(clusterId);
+    inUse = sessionIds.isKeyInCache(clusterId);
     if (inUse) {
       return true; //optimisation - if this session is one we've been managing, we can check locally
     }
@@ -98,7 +104,7 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
         logger.info("Session id " + sessionId.getId() + " " + sessionId.getCreatedAt());
       }
       SessionReplicationAPI.getInstance().getIdWriter().save(sessionId);
-      sessionIds.add(id);
+      sessionIds.put(new Element(id, System.currentTimeMillis()));
     }
     catch (Exception ex) {
       logger.error("Could not add session id!", ex);

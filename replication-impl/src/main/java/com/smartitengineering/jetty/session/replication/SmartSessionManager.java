@@ -21,12 +21,13 @@ package com.smartitengineering.jetty.session.replication;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSessionListener;
+import net.sf.ehcache.Cache;
+import net.sf.ehcache.Element;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.session.AbstractSessionManager;
 import org.eclipse.jetty.util.LazyList;
@@ -43,31 +44,29 @@ public class SmartSessionManager extends AbstractSessionManager {
   protected final ReentrantLock lock = new ReentrantLock();
   private final static long DEFAULT_INTERVAL = 300;
   private final static long DEFAULT_EXPIRY_TIME = 24 * 60 * 60 * 1000;
-  private Map<String, Session> sessions;
+  private Cache sessions;
   private long saveInterval = 0;
 
   @Override
   public void doStart() throws Exception {
     super.doStart();
-    sessions = new ConcurrentHashMap<String, SmartSessionManager.Session>();
+    sessions = SessionReplicationAPI.getInstance().getSessionCache();
   }
 
   @Override
   public void doStop() throws Exception {
     super.doStop();
-    sessions.clear();
-    sessions = null;
   }
 
   @Override
   public int getSessions() {
-    return sessions.size();
+    return sessions.getSize();
   }
 
   @Override
   public Map getSessionMap() {
     logger.info("getSessionMap");
-    return Collections.unmodifiableMap(sessions);
+    return Collections.unmodifiableMap(sessions.getAllWithLoader(sessions.getKeysWithExpiryCheck(), null));
   }
 
   @Override
@@ -75,7 +74,7 @@ public class SmartSessionManager extends AbstractSessionManager {
     logger.info("addSession");
     try {
       Session session = (SmartSessionManager.Session) sn;
-      sessions.put(session.getClusterId(), session);
+      sessions.put(new Element(session.getClusterId(), session));
       session.willPassivate();
       lock.lock();
       try {
@@ -96,10 +95,11 @@ public class SmartSessionManager extends AbstractSessionManager {
     logger.info("getSession");
     lock.lock();
     try {
-      Session session = sessions.get(idInCluster);
+      final Element val = sessions.get(idInCluster);
+      Session session = val != null ? (Session) val.getValue() : null;
       final SessionData data;
       long now = System.currentTimeMillis();
-      if (session == null || now > session.sessionData.getLastSaved()) {
+      if (session == null || (now - session.sessionData.getLastSaved()) >= (getSaveInterval() * 1000)) {
         data = loadSession(idInCluster);
         session = null;
       }
@@ -119,8 +119,8 @@ public class SmartSessionManager extends AbstractSessionManager {
             session = new Session(now, data);
             if ((data.getAccessed() - data.getLastSaved()) >= (getSaveInterval() * 1000)) {
               updateSession(session);
+              sessions.put(new Element(idInCluster, session));
             }
-            sessions.put(idInCluster, session);
             session.didActivate();
           }
         }
