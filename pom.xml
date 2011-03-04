@@ -67,6 +67,7 @@
   </build>
   <properties>
     <junit.version>4.8.1</junit.version>
+    <ehcache.version>2.3.2</ehcache.version>
   </properties>
   <modules>
     <module>replication-impl</module>
