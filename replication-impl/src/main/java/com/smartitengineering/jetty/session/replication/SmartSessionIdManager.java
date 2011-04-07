@@ -73,6 +73,9 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
     }
     String clusterId = getClusterId(id);
     boolean inUse = false;
+    if (logger.isInfoEnabled()) {
+      logger.info("Checking for " + clusterId + " in " + sessionIds);
+    }
     inUse = sessionIds.isKeyInCache(clusterId);
     if (inUse) {
       return true; //optimisation - if this session is one we've been managing, we can check locally
