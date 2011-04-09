@@ -46,7 +46,6 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
   protected final Logger logger = LoggerFactory.getLogger(getClass());
   private final Server server;
   private final ReentrantLock lock = new ReentrantLock();
-  private Cache sessionIds;
 
   public SmartSessionIdManager(Server server, Random random) {
     super(random);
@@ -60,7 +59,6 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
   @Override
   protected void doStart() throws Exception {
     super.doStart();
-    sessionIds = SessionReplicationAPI.getInstance().getSessionIdCache();
   }
 
   @Override
@@ -73,6 +71,7 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
     }
     String clusterId = getClusterId(id);
     boolean inUse = false;
+    Cache sessionIds = SessionReplicationAPI.getInstance().getSessionIdCache();
     if (logger.isInfoEnabled()) {
       logger.info("Checking for " + clusterId + " in " + sessionIds);
     }
@@ -107,6 +106,7 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
         logger.info("Session id " + sessionId.getId() + " " + sessionId.getCreatedAt());
       }
       SessionReplicationAPI.getInstance().getIdWriter().save(sessionId);
+      Cache sessionIds = SessionReplicationAPI.getInstance().getSessionIdCache();
       sessionIds.put(new Element(id, System.currentTimeMillis()));
     }
     catch (Exception ex) {
@@ -142,6 +142,7 @@ public class SmartSessionIdManager extends AbstractSessionIdManager {
                 SessionReplicationAPI.getInstance().getIdReader().getById(clusterId);
       if (sessionId != null) {
         SessionReplicationAPI.getInstance().getIdWriter().delete(sessionId);
+        Cache sessionIds = SessionReplicationAPI.getInstance().getSessionIdCache();
         sessionIds.remove(sessionId.getId());
       }
     }
